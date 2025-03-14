@@ -1,7 +1,8 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.121.1/examples/jsm/controls/OrbitControls.js';
-import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.121.1/examples/jsm/loaders/GLTFLoader.js';
-import {FBXLoader} from 'https://cdn.jsdelivr.net/npm/three@0.121.1/examples/jsm/loaders/FBXLoader.js';
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.118/build/three.module.js';
+
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.118/examples/jsm/controls/OrbitControls.js';
+import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.118/examples/jsm/loaders/GLTFLoader.js';
+import {FBXLoader} from 'https://cdn.jsdelivr.net/npm/three@0.118/examples/jsm/loaders/FBXLoader.js';
 
 class BasicWorldDemo {
     constructor() {
@@ -86,15 +87,38 @@ class BasicWorldDemo {
         box.position.set(0, 4, 0); //set position
         box.castShadow = true; //default is false
         box.receiveShadow = true; //default
-        this.scene.add(box); //add to scene
+        //this.scene.add(box); //add to scene
 
         //reqiestAnimationFrame
         this._RAF(); //start render
         //this._LoadModels(); //load models
-        //this._LoadAnimatedModel(); //load animated model
+        this._LoadAnimatedModel(); //load animated model
+        this._LoadAnimatedModel1(); //load animated model
     }
 
     _LoadAnimatedModel() {
+        const loader = new FBXLoader(); //create loader
+        loader.setPath('./resources/paladin/'); //set path
+        loader.load('ZombieIdle.fbx', (fbx) => {
+            fbx.position.set(0, 0, 30); //set position
+            fbx.rotation.y = Math.PI; //rotate
+            fbx.scale.setScalar(0.1); //set scale
+            fbx.traverse(c => {
+                c.castShadow = true; //default is false
+            }); 
+            
+            const anim = new FBXLoader(); //create loader
+            anim.setPath('./resources/paladin/'); //set path
+            anim.load('flair.fbx', (anim) => {
+                this._mixer = new THREE.AnimationMixer(fbx); //create mixer
+                const idle = this._mixer.clipAction(anim.animations[0]);
+                idle.play(); //play animation
+            });
+            this.scene.add(fbx); //add to scene
+        }); //load model //load animation
+    }
+
+    _LoadAnimatedModel1() {
         const loader = new FBXLoader(); //create loader
         loader.setPath('./resources/paladin/'); //set path
         loader.load('ZombieIdle.fbx', (fbx) => {
@@ -105,28 +129,26 @@ class BasicWorldDemo {
             
             const anim = new FBXLoader(); //create loader
             anim.setPath('./resources/paladin/'); //set path
-            anim.load('SwordAndShieldRun.fbx', (anim) => {
-                this._mixer = new THREE.AnimationMixer(fbx); //create mixer
-                const idle = this._mixer.clipAction(fbx.animations[0]); //create clip
+            anim.load('jumping.fbx', (anim) => {
+                this._mixer1 = new THREE.AnimationMixer(fbx); //create mixer
+                const idle = this._mixer1.clipAction(anim.animations[0]);
                 idle.play(); //play animation
             });
             this.scene.add(fbx); //add to scene
-        }, undefined, (error) => {
-            console.error('Erro ao carregar o modelo FBX:', error);
         }); //load model //load animation
     }
 
-    _LoadModels() {
-        const loader = new GLTFLoader(); //create loader
-        loader.load('./resources/scene.gltf', (gltf) => {
-            gltf.scene.traverse((c) => {
-                c.castShadow = true; //default is false
-            }); //traverse
-            this.scene.add(gltf.scene); //add to scene
-        }, undefined, (error) => {
-            console.error('Erro ao carregar o modelo GLTF:', error);
-        }); //load model
-    }
+    // _LoadModels() {
+    //     const loader = new GLTFLoader(); //create loader
+    //     loader.load('./resources/scene.gltf', (gltf) => {
+    //         gltf.scene.traverse((c) => {
+    //             c.castShadow = true; //default is false
+    //         }); //traverse
+    //         this.scene.add(gltf.scene); //add to scene
+    //     }, undefined, (error) => {
+    //         console.error('Erro ao carregar o modelo GLTF:', error);
+    //     }); //load model
+    // }
 
     _OnWindowResize() {
         this.threejs.setSize(window.innerWidth, window.innerHeight); //update size
@@ -136,10 +158,16 @@ class BasicWorldDemo {
 
     _RAF() {
         requestAnimationFrame(() => {
-            this.threejs.render(this.scene, this.camera); //render
-            this.controls.update(); // Atualize os controles
-            this._RAF(); 
-        }); 
+            if (this._mixer) {
+                this._mixer.update(0.016); // Atualiza o mixer com o tempo delta (16ms para ~60fps)
+            }
+            if (this._mixer1) {
+                this._mixer1.update(0.016); // Atualiza o mixer com o tempo delta (16ms para ~60fps)
+            }
+            this.threejs.render(this.scene, this.camera);
+            this.controls.update();
+            this._RAF();
+        });
     } //requestAnimationFrame
 }
 
